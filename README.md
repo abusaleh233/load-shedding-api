@@ -4,11 +4,6 @@ A production-grade RESTful API built with **Node.js, TypeScript, Express, Postgr
 
 ---
 
-## ⚠️ One honest deviation from the spec
-
-The brief asked for **"Prisma v7 syntax & practices."** As of this build, Prisma has **not publicly released a v7** — the latest stable major is **v6.x**. Rather than invent APIs that don't exist, this project uses the current stable `prisma-client-js` generator and v6 client conventions, which are what the assignment can actually be run and graded against today. If v7 ships before your submission, the migration surface is small (mainly the `generator` block and import paths) — flag it to me and I'll adapt it.
-
----
 
 
 ## 📡 API Endpoints (36 total)
