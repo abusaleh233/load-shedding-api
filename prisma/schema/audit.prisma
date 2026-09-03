@@ -1,0 +1,26 @@
+// ============================================================================
+// prisma/schema/audit.prisma
+// ============================================================================
+
+/// Immutable audit trail for critical/sensitive actions across every
+/// module (auth events, RBAC changes, CRUD on Substation/Area/Schedule/
+/// OutageLog/Bill/Payment, soft deletes). Written inside the same
+/// transaction as the action it records — see recordAudit() in
+/// src/modules/audit/audit.service.ts.
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // e.g. "SCHEDULE_CREATE", "USER_DELETE", "PAYMENT_SUCCEEDED"
+  entity    String // e.g. "Schedule", "User", "Payment", "Bill"
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

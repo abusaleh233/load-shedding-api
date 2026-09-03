@@ -1,0 +1,72 @@
+// ============================================================================
+// prisma/schema/enums.prisma
+// All Prisma enums for the project, kept in one dedicated file rather than
+// scattered next to each model — mirrors the layout style requested.
+// ============================================================================
+
+enum Role {
+  ADMIN
+  OPERATOR
+  CONSUMER
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum SubstationStatus {
+  ACTIVE
+  MAINTENANCE
+  DECOMMISSIONED
+}
+
+/// Severity/triage level. Used by OutageLog (impact of a reported outage,
+/// driving OPERATOR/ADMIN response ordering) and by Schedule (how
+/// disruptive a planned outage is, e.g. CRITICAL areas like hospitals get
+/// scheduled last / avoided).
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ScheduleStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum OutageType {
+  SCHEDULED
+  EMERGENCY
+}
+
+enum OutageLogStatus {
+  REPORTED
+  IN_PROGRESS
+  RESOLVED
+}
+
+/// Deliberately a distinct enum from PaymentStatus: a Bill's lifecycle (has
+/// it been settled at all?) is not the same axis as an individual Payment
+/// attempt's outcome (did *this* Stripe transaction succeed?). A Bill can
+/// accumulate several FAILED Payment attempts while remaining UNPAID, then
+/// flip to PAID the moment one Payment SUCCEEDS.
+enum BillStatus {
+  UNPAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+/// One transaction attempt's outcome — see BillStatus above for why this
+/// is kept separate rather than reused for the Bill's own lifecycle.
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}

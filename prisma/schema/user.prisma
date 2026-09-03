@@ -1,0 +1,47 @@
+// ============================================================================
+// prisma/schema/user.prisma
+// ============================================================================
+
+model User {
+  id         String       @id @default(uuid())
+  name       String
+  email      String       @unique
+  password   String? // nullable: social-login users have no local password
+  phone      String?
+  role       Role         @default(CONSUMER)
+  provider   AuthProvider @default(LOCAL)
+  googleId   String?      @unique
+  isVerified Boolean      @default(false)
+  isActive   Boolean      @default(true)
+
+  refreshTokens    RefreshToken[]
+  reportedOutages  OutageLog[]    @relation("OutageReporter")
+  createdSchedules Schedule[]     @relation("ScheduleCreator")
+  bills            Bill[]
+  payments         Payment[]
+  auditLogs        AuditLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  @@index([email])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+/// Hashed, single-use, rotating refresh tokens — one row per issued token
+/// so any individual session can be revoked without invalidating others.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}

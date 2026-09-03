@@ -1,0 +1,24 @@
+// ============================================================================
+// prisma/schema/area.prisma
+// ============================================================================
+
+model Area {
+  id           String     @id @default(uuid())
+  name         String
+  feederCode   String     @unique
+  substationId String
+  substation   Substation @relation(fields: [substationId], references: [id], onDelete: Restrict)
+
+  schedules Schedule[]
+  outages   OutageLog[]
+  bills     Bill[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([substationId])
+  @@index([feederCode])
+  @@index([deletedAt])
+  @@map("areas")
+}

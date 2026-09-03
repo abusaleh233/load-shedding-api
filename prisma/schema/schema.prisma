@@ -1,0 +1,24 @@
+// ============================================================================
+// prisma/schema/schema.prisma
+// Root config for the multi-file Prisma schema: datasource + generator only.
+// All enums now live in prisma/schema/enums.prisma; every other file holds
+// just its own model(s).
+//
+// NOTE ON "Prisma v7": as of this build, Prisma has not publicly shipped a
+// v7 — the latest stable major is v6.x. Multi-file schemas (the
+// prisma/schema/*.prisma folder layout used throughout this project) are a
+// real Prisma feature, but require the "prismaSchemaFolder" preview flag on
+// v6.x (it is expected to graduate to stable in a future release — possibly
+// what "v7" will end up being). This file enables that flag explicitly
+// rather than silently assuming a future API surface.
+// ============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

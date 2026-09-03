@@ -1,0 +1,32 @@
+// ============================================================================
+// prisma/schema/schedule.prisma
+// ============================================================================
+
+/// Planned load-shedding schedule for an Area. Overlap prevention is
+/// enforced at the service layer (prisma.$transaction + a Postgres
+/// advisory lock keyed on areaId) rather than here — Prisma's schema DSL
+/// cannot express a Postgres EXCLUDE constraint, which is the recommended
+/// DB-level defense-in-depth companion to the application-level check.
+/// See src/modules/schedule/schedule.service.ts.
+model Schedule {
+  id        String         @id @default(uuid())
+  areaId    String
+  area      Area           @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime
+  reason    String
+  priority  PriorityLevel  @default(MEDIUM)
+  status    ScheduleStatus @default(PLANNED)
+
+  createdById String
+  createdBy   User   @relation("ScheduleCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([areaId, startTime, endTime])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("schedules")
+}

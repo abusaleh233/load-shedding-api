@@ -1,0 +1,33 @@
+// ============================================================================
+// prisma/schema/outage.prisma
+// ============================================================================
+
+/// Actual outage record — either materialized from a Schedule (type =
+/// SCHEDULED) or reported ad-hoc by any authenticated user, including a
+/// CONSUMER (type = EMERGENCY). `priority` drives operator triage ordering
+/// and is required specifically for EMERGENCY reports.
+model OutageLog {
+  id          String          @id @default(uuid())
+  areaId      String
+  area        Area            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  type        OutageType
+  priority    PriorityLevel   @default(MEDIUM)
+  status      OutageLogStatus @default(REPORTED)
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+
+  reportedById String
+  reportedBy   User   @relation("OutageReporter", fields: [reportedById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([areaId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([deletedAt])
+  @@map("outage_logs")
+}

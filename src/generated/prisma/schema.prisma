@@ -1,0 +1,347 @@
+// ============================================================================
+// prisma/schema/area.prisma
+// ============================================================================
+
+model Area {
+  id           String     @id @default(uuid())
+  name         String
+  feederCode   String     @unique
+  substationId String
+  substation   Substation @relation(fields: [substationId], references: [id], onDelete: Restrict)
+
+  schedules Schedule[]
+  outages   OutageLog[]
+  bills     Bill[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([substationId])
+  @@index([feederCode])
+  @@index([deletedAt])
+  @@map("areas")
+}
+
+// ============================================================================
+// prisma/schema/audit.prisma
+// ============================================================================
+
+/// Immutable audit trail for critical/sensitive actions across every
+/// module (auth events, RBAC changes, CRUD on Substation/Area/Schedule/
+/// OutageLog/Bill/Payment, soft deletes). Written inside the same
+/// transaction as the action it records — see recordAudit() in
+/// src/modules/audit/audit.service.ts.
+model AuditLog {
+  id        String  @id @default(uuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // e.g. "SCHEDULE_CREATE", "USER_DELETE", "PAYMENT_SUCCEEDED"
+  entity    String // e.g. "Schedule", "User", "Payment", "Bill"
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// prisma/schema/bill.prisma
+// ============================================================================
+
+/// A consumer's electricity bill for a given Area and billing period.
+/// Created by OPERATOR/ADMIN (or a future metering job); paid via the
+/// Stripe flow in payment.prisma, which links back here through Payment.billId.
+model Bill {
+  id                 String     @id @default(uuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  areaId             String
+  area               Area       @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  unitsConsumedKWh   Float
+  amountDue          Int // smallest currency unit (cents/paisa), matches Payment.amount
+  currency           String     @default("usd")
+  status             BillStatus @default(UNPAID)
+  dueDate            DateTime
+
+  payments Payment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([areaId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([deletedAt])
+  @@map("bills")
+}
+
+// ============================================================================
+// prisma/schema/enums.prisma
+// All Prisma enums for the project, kept in one dedicated file rather than
+// scattered next to each model — mirrors the layout style requested.
+// ============================================================================
+
+enum Role {
+  ADMIN
+  OPERATOR
+  CONSUMER
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum SubstationStatus {
+  ACTIVE
+  MAINTENANCE
+  DECOMMISSIONED
+}
+
+/// Severity/triage level. Used by OutageLog (impact of a reported outage,
+/// driving OPERATOR/ADMIN response ordering) and by Schedule (how
+/// disruptive a planned outage is, e.g. CRITICAL areas like hospitals get
+/// scheduled last / avoided).
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ScheduleStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum OutageType {
+  SCHEDULED
+  EMERGENCY
+}
+
+enum OutageLogStatus {
+  REPORTED
+  IN_PROGRESS
+  RESOLVED
+}
+
+/// Deliberately a distinct enum from PaymentStatus: a Bill's lifecycle (has
+/// it been settled at all?) is not the same axis as an individual Payment
+/// attempt's outcome (did *this* Stripe transaction succeed?). A Bill can
+/// accumulate several FAILED Payment attempts while remaining UNPAID, then
+/// flip to PAID the moment one Payment SUCCEEDS.
+enum BillStatus {
+  UNPAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+/// One transaction attempt's outcome — see BillStatus above for why this
+/// is kept separate rather than reused for the Bill's own lifecycle.
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+// ============================================================================
+// prisma/schema/outage.prisma
+// ============================================================================
+
+/// Actual outage record — either materialized from a Schedule (type =
+/// SCHEDULED) or reported ad-hoc by any authenticated user, including a
+/// CONSUMER (type = EMERGENCY). `priority` drives operator triage ordering
+/// and is required specifically for EMERGENCY reports.
+model OutageLog {
+  id          String          @id @default(uuid())
+  areaId      String
+  area        Area            @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  type        OutageType
+  priority    PriorityLevel   @default(MEDIUM)
+  status      OutageLogStatus @default(REPORTED)
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+
+  reportedById String
+  reportedBy   User   @relation("OutageReporter", fields: [reportedById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([areaId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([deletedAt])
+  @@map("outage_logs")
+}
+
+// ============================================================================
+// prisma/schema/payment.prisma
+// ============================================================================
+
+/// One row per Stripe transaction attempt. `billId` is optional: it is set
+/// when the payment is settling a specific Bill (the primary flow), but the
+/// field stays nullable so the same model still supports a generic,
+/// non-bill checkout (e.g. an ad-hoc service charge) without forcing a
+/// throwaway Bill row to exist first.
+model Payment {
+  id     String  @id @default(uuid())
+  userId String
+  user   User    @relation(fields: [userId], references: [id])
+  billId String?
+  bill   Bill?   @relation(fields: [billId], references: [id], onDelete: SetNull)
+
+  amount   Int // smallest currency unit (cents/paisa)
+  currency String        @default("usd")
+  status   PaymentStatus @default(PENDING)
+
+  stripeCheckoutSessionId String? @unique
+  stripePaymentIntentId   String? @unique
+  description             String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([billId])
+  @@index([status])
+  @@map("payments")
+}
+
+// ============================================================================
+// prisma/schema/schedule.prisma
+// ============================================================================
+
+/// Planned load-shedding schedule for an Area. Overlap prevention is
+/// enforced at the service layer (prisma.$transaction + a Postgres
+/// advisory lock keyed on areaId) rather than here — Prisma's schema DSL
+/// cannot express a Postgres EXCLUDE constraint, which is the recommended
+/// DB-level defense-in-depth companion to the application-level check.
+/// See src/modules/schedule/schedule.service.ts.
+model Schedule {
+  id        String         @id @default(uuid())
+  areaId    String
+  area      Area           @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime
+  reason    String
+  priority  PriorityLevel  @default(MEDIUM)
+  status    ScheduleStatus @default(PLANNED)
+
+  createdById String
+  createdBy   User   @relation("ScheduleCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([areaId, startTime, endTime])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("schedules")
+}
+
+// ============================================================================
+// prisma/schema/schema.prisma
+// ============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../../src/generated/prisma"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// prisma/schema/substation.prisma
+// ============================================================================
+
+model Substation {
+  id         String           @id @default(uuid())
+  name       String
+  code       String           @unique
+  location   String
+  capacityMW Float
+  status     SubstationStatus @default(ACTIVE)
+
+  areas Area[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([code])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("substations")
+}
+
+// ============================================================================
+// prisma/schema/user.prisma
+// ============================================================================
+
+model User {
+  id         String       @id @default(uuid())
+  name       String
+  email      String       @unique
+  password   String? // nullable: social-login users have no local password
+  phone      String?
+  role       Role         @default(CONSUMER)
+  provider   AuthProvider @default(LOCAL)
+  googleId   String?      @unique
+  isVerified Boolean      @default(false)
+  isActive   Boolean      @default(true)
+
+  refreshTokens    RefreshToken[]
+  reportedOutages  OutageLog[]    @relation("OutageReporter")
+  createdSchedules Schedule[]     @relation("ScheduleCreator")
+  bills            Bill[]
+  payments         Payment[]
+  auditLogs        AuditLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  @@index([email])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+/// Hashed, single-use, rotating refresh tokens — one row per issued token
+/// so any individual session can be revoked without invalidating others.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}

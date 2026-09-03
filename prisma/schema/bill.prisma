@@ -1,0 +1,34 @@
+// ============================================================================
+// prisma/schema/bill.prisma
+// ============================================================================
+
+/// A consumer's electricity bill for a given Area and billing period.
+/// Created by OPERATOR/ADMIN (or a future metering job); paid via the
+/// Stripe flow in payment.prisma, which links back here through Payment.billId.
+model Bill {
+  id                  String     @id @default(uuid())
+  userId              String
+  user                User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  areaId              String
+  area                Area       @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  billingPeriodStart  DateTime
+  billingPeriodEnd    DateTime
+  unitsConsumedKWh    Float
+  amountDue           Int // smallest currency unit (cents/paisa), matches Payment.amount
+  currency            String     @default("usd")
+  status              BillStatus @default(UNPAID)
+  dueDate             DateTime
+
+  payments Payment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([userId])
+  @@index([areaId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([deletedAt])
+  @@map("bills")
+}

@@ -1,0 +1,23 @@
+// ============================================================================
+// prisma/schema/substation.prisma
+// ============================================================================
+
+model Substation {
+  id         String           @id @default(uuid())
+  name       String
+  code       String           @unique
+  location   String
+  capacityMW Float
+  status     SubstationStatus @default(ACTIVE)
+
+  areas Area[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([code])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("substations")
+}
