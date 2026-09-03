@@ -84,7 +84,7 @@ Base path: `/api/v1` (configurable via `API_PREFIX`)
 | GET | `/` | ADMIN (paginated, filterable by entity/action/userId) |
 
 ### Misc
-`GET /api/v1/health` — liveness probe.
+`GET /api/v1` — liveness probe.
 
 ---
 
@@ -92,8 +92,8 @@ Base path: `/api/v1` (configurable via `API_PREFIX`)
 ### Seeded accounts (after `npm run prisma:seed`)
 | Role | Email | Password |
 |---|---|---|
-| ADMIN | admin123@gmail.com | admin123 |
-| OPERATOR | operator123@gmail.com | operator123 |
-| CONSUMER | consumer123@gmail.com | consumer123 |
+| ADMIN | admin123@gmail.com | Admin123! |
+| OPERATOR | operator123@gmail.com | Operator123! |
+| CONSUMER | consumer123@gmail.com | Consumer123! |
 
 ---
