@@ -136,13 +136,6 @@ export async function handleWebhookEvent(rawBody: Buffer, signature: string) {
   return { received: true };
 }
 
-/**
- * Core Step-4 requirement: on payment_intent.succeeded, update the Payment
- * to SUCCEEDED, the linked Bill to PAID, and write an AuditLog entry — all
- * inside a single Prisma transaction. Idempotent: if this Payment has
- * already been marked SUCCEEDED (Stripe can and does redeliver webhooks),
- * the transaction short-circuits instead of double-processing.
- */
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({
