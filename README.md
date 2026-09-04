@@ -65,6 +65,15 @@ Base path: `/api/v1` (configurable via `API_PREFIX`)
 | PATCH | `/:id` | ADMIN, OPERATOR |
 | DELETE | `/:id` | ADMIN |
 
+### Bills — `/bills`
+| Method | Path | Access |
+|---|---|---|
+| POST | `/` | ADMIN, OPERATOR |
+| GET | `/` | Authenticated (ADMIN sees all, CONSUMER sees own) |
+| GET | `/:id` | Authenticated |
+| PATCH | `/:id` | ADMIN, OPERATOR |
+| DELETE | `/:id` | ADMIN |
+
 ### Payments — `/payments`
 | Method | Path | Access |
 |---|---|---|
