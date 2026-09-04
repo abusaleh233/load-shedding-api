@@ -5,6 +5,7 @@ import substationRoutes from "../modules/substation/substation.routes";
 import areaRoutes from "../modules/area/area.routes";
 import scheduleRoutes from "../modules/schedule/schedule.routes";
 import outageRoutes from "../modules/outage/outage.routes";
+import billRoutes from "../modules/bill/bill.routes";
 import paymentRoutes from "../modules/payment/payment.routes";
 import auditRoutes from "../modules/audit/audit.routes";
 
@@ -22,6 +23,7 @@ router.use("/substations", substationRoutes);
 router.use("/areas", areaRoutes);
 router.use("/schedules", scheduleRoutes);
 router.use("/outages", outageRoutes);
+router.use("/bills", billRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/admin/audit-logs", auditRoutes);
 
