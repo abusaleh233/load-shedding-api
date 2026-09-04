@@ -24,8 +24,6 @@ export const updateBillSchema = z.object({
   body: z.object({
     amountDue: z.number().int().positive().optional(),
     dueDate: z.coerce.date().optional(),
-    // PAID is intentionally excluded here — only the Stripe
-    // payment_intent.succeeded webhook is allowed to mark a Bill PAID.
     status: z.enum([BillStatus.OVERDUE, BillStatus.CANCELLED]).optional(),
   }),
 });
