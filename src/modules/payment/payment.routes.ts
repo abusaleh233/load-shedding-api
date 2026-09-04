@@ -6,9 +6,6 @@ import { validate } from "../../middlewares/validate.middleware";
 import { createCheckoutSessionSchema, listQuerySchema } from "./payment.schema";
 import * as controller from "./payment.controller";
 
-// NOTE: the raw-body webhook route is registered separately in routes/index.ts
-// (it must NOT pass through express.json()). This router only covers the
-// authenticated, JSON-bodied payment endpoints.
 const router = Router();
 
 router.post(
