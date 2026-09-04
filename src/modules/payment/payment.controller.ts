@@ -8,13 +8,6 @@ export const createCheckoutSession = asyncHandler(async (req: Request, res: Resp
   ApiResponse.created(res, result, "Checkout session created successfully");
 });
 
-/**
- * POST /api/v1/payments/webhook
- * NOTE: receives the raw Buffer body — see app.ts, where express.raw() is
- * mounted for this exact path ahead of the global express.json() parser.
- * Stripe signature verification fails on an already-parsed/re-serialized
- * body, so this handler must never be reached through the JSON middleware.
- */
 export const stripeWebhook = asyncHandler(async (req: Request, res: Response) => {
   const signature = req.headers["stripe-signature"] as string;
   const result = await paymentService.handleWebhookEvent(req.body as Buffer, signature);
