@@ -3,10 +3,6 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { ApiResponse } from "../../utils/ApiResponse";
 import * as paymentService from "./payment.service";
 
-/**
- * POST /api/v1/payments/create-checkout-session
- * Initiates a Stripe Checkout Session for the given (unpaid) Bill.
- */
 export const createCheckoutSession = asyncHandler(async (req: Request, res: Response) => {
   const result = await paymentService.createCheckoutSession(req.user!.sub, req.user!.email, req.body.billId);
   ApiResponse.created(res, result, "Checkout session created successfully");
