@@ -1,13 +1,7 @@
 import { Response } from "express";
 import { successResponse } from "./response";
 
-/**
- * Thin, chainable class wrapper over the plain successResponse() helper in
- * response.ts — kept because controllers read more clearly as
- * `ApiResponse.created(res, data, "...")` than a bare function call at
- * every call site. Both ultimately produce the identical mandatory shape:
- * { success: true, message, data }.
- */
+
 export class ApiResponse {
   static success<T>(
     res: Response,
