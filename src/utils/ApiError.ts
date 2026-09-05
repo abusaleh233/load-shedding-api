@@ -1,11 +1,5 @@
 import { ApiErrorItem } from "./response";
 
-/**
- * Custom application error. Thrown from anywhere in the request lifecycle
- * (services, controllers, middlewares) and normalized by error.middleware.ts
- * into the mandatory error response shape via errorResponse() in response.ts:
- * { success: false, message: string, errors: [] }
- */
 export class ApiError extends Error {
   public statusCode: number;
   public errors: ApiErrorItem[];
