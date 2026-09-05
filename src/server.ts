@@ -7,8 +7,7 @@ import { logger } from "./utils/logger";
 async function bootstrap() {
   const app = createApp();
 
-  // Fail fast if the database is unreachable rather than accepting traffic
-  // and erroring on every request.
+  
   try {
     await prisma.$connect();
     logger.info("PostgreSQL connected via Prisma");
