@@ -27,13 +27,7 @@ export function createApp(): Application {
   );
   app.use(globalLimiter);
 
-  // --- IMPORTANT: Stripe webhook must be registered BEFORE express.json() ---
-  // Express applies body-parsing middleware in the order it was app.use()'d,
-  // regardless of where the matching route handler lives in a sub-router.
-  // If express.json() ran first, it would consume and re-serialize the
-  // body, breaking Stripe's HMAC signature check (which is computed over
-  // the exact raw bytes Stripe sent). So this single route gets its own
-  // express.raw() parser, registered ahead of the global JSON parser below.
+ 
   app.post(
     `${env.API_PREFIX}/payments/webhook`,
     express.raw({ type: "application/json" }),
