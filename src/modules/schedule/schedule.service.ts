@@ -4,46 +4,6 @@ import { ApiError } from "../../utils/ApiError";
 import { recordAudit } from "../audit/audit.service";
 import { invalidateCache } from "../../config/redis";
 
-/**
- * -------------------------------------------------------------------------
- * OVERLAP PREVENTION / RACE-CONDITION STRATEGY
- * -------------------------------------------------------------------------
- * Two concurrent requests scheduling the same Area could both pass a naive
- * "check then insert" overlap check under READ COMMITTED isolation (the
- * Postgres default) because neither transaction sees the other's uncommitted
- * row. We close that gap with a two-layer defense:
- *
- *   1. checkScheduleOverlap() — the actual overlap TEST: a plain Prisma
- *      query using the standard interval-overlap predicate
- *      (existing.start < new.end) AND (existing.end > new.start), against
- *      every non-cancelled, non-deleted Schedule for the same Area.
- *   2. assertNoOverlap() — wraps that test with a Postgres transaction-scoped
- *      ADVISORY LOCK keyed on the areaId (pg_advisory_xact_lock(hashtext(areaId))).
- *      This serializes all schedule writes for the same area — a second
- *      concurrent transaction blocks until the first commits or rolls back —
- *      so by the time checkScheduleOverlap() runs, it always sees a
- *      consistent, up-to-date picture instead of a stale snapshot.
- *
- * Without the lock, checkScheduleOverlap() alone is still correct for
- * sequential calls but is vulnerable to the classic TOCTOU race under
- * concurrent load; without the query, the lock alone serializes writes but
- * never actually detects a conflict. Both pieces are required together.
- *
- * For defense-in-depth in production, this should be paired with a native
- * Postgres EXCLUDE constraint (via the btree_gist extension) on
- * (area_id WITH =, tsrange(start_time, end_time) WITH &&) added through a
- * raw SQL migration — Prisma's schema DSL can't express EXCLUDE constraints
- * directly, so it's documented here rather than silently omitted.
- * -------------------------------------------------------------------------
- */
-
-/**
- * Pure overlap test: does any existing, non-cancelled, non-deleted Schedule
- * for `areaId` intersect [startTime, endTime)? Returns the conflicting
- * Schedule (or null). Takes a Prisma client/transaction client so it can be
- * called either standalone (e.g. for a "preview" endpoint or a unit test
- * against a test database) or from inside assertNoOverlap()'s transaction.
- */
 export async function checkScheduleOverlap(
   client: Prisma.TransactionClient | typeof prisma,
   areaId: string,
