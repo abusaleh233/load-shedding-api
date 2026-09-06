@@ -13,9 +13,7 @@ export async function createOutage(
   const area = await prisma.area.findFirst({ where: { id: data.areaId, deletedAt: null } });
   if (!area) throw ApiError.badRequest("Referenced area does not exist");
 
-  // Only OPERATOR/ADMIN may log SCHEDULED outage records (they materialize
-  // from the Schedule engine); any authenticated user (including CONSUMER)
-  // may report an EMERGENCY outage.
+  
   if (data.type === OutageType.SCHEDULED && actorRole === Role.CONSUMER) {
     throw ApiError.forbidden("Only operators or admins can log scheduled outages");
   }
@@ -51,12 +49,7 @@ export async function createOutage(
   return outage;
 }
 
-/**
- * "Live outages" — currently REPORTED or IN_PROGRESS OutageLog rows. This is
- * the high-traffic, latency-sensitive endpoint the rubric calls out for
- * caching: results are cached in Redis for REDIS_TTL_SECONDS and
- * invalidated on any outage/schedule/area/substation mutation.
- */
+
 export async function getLiveOutages() {
   return cacheAside("outages:live", env.REDIS_TTL_SECONDS, async () => {
     return prisma.outageLog.findMany({
