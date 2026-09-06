@@ -7,23 +7,6 @@ import { ApiError } from "../../utils/ApiError";
 import { logger } from "../../utils/logger";
 import { recordAudit } from "../audit/audit.service";
 
-/**
- * STEP 4 — Stripe Payment Flow, against an unpaid Bill.
- *
- * Flow:
- *   1. createCheckoutSession(): looks up the Bill, refuses if it's already
- *      settled or doesn't belong to the caller, creates a Stripe Checkout
- *      Session for exactly `bill.amountDue`, and records a PENDING Payment
- *      row linked to that Bill.
- *   2. handleWebhookEvent(): Stripe calls back on `payment_intent.succeeded`
- *      (the source of truth that money actually moved — Checkout Session
- *      events fire before/around this and are treated as secondary
- *      bookkeeping signals, not the trigger for marking a Bill paid).
- *      The Payment is marked SUCCEEDED, the linked Bill is marked PAID, and
- *      an AuditLog row is written — all inside one Prisma transaction, so a
- *      crash between steps can never leave the Bill "paid" with no matching
- *      Payment record (or vice versa).
- */
 
 export async function createCheckoutSession(userId: string, email: string, billId: string) {
   const bill = await prisma.bill.findFirst({ where: { id: billId, deletedAt: null } });
@@ -60,11 +43,7 @@ export async function createCheckoutSession(userId: string, email: string, billI
     cancel_url: env.STRIPE_CANCEL_URL,
   });
 
-  // For Checkout Sessions in "payment" mode, Stripe creates the underlying
-  // PaymentIntent immediately (it doesn't wait for the customer to pay), so
-  // session.payment_intent is already a usable ID here — capturing it now
-  // lets the webhook correlate payment_intent.succeeded straight back to
-  // this Payment row without any extra lookup.
+  
   const payment = await prisma.payment.create({
     data: {
       userId,
@@ -90,12 +69,7 @@ export async function createCheckoutSession(userId: string, email: string, billI
   return { checkoutUrl: session.url, sessionId: session.id, payment };
 }
 
-/**
- * Verifies the Stripe webhook signature. Requires the RAW request body —
- * see app.ts, where this route is mounted with express.raw() ahead of the
- * global express.json() parser, since Stripe's HMAC check is computed over
- * the exact bytes it sent and breaks if the body has been parsed/re-serialized.
- */
+
 export async function handleWebhookEvent(rawBody: Buffer, signature: string) {
   let event: Stripe.Event;
   try {
