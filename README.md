@@ -6,7 +6,7 @@ A production-grade RESTful API built with **Node.js, TypeScript, Express, Postgr
 
 
 
-## 📡 API Endpoints (36 total)
+## 📡 API Endpoints (41 total)
 
 Base path: `/api/v1` (configurable via `API_PREFIX`)
 
