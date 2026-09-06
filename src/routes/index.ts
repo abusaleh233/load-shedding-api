@@ -11,11 +11,7 @@ import auditRoutes from "../modules/audit/audit.routes";
 
 const router = Router();
 
-// NOTE: POST /payments/webhook is intentionally NOT mounted here. It is
-// registered directly on the app in app.ts, ahead of the global
-// express.json() parser, because Stripe's signature verification requires
-// the raw (unparsed) request body. See app.ts for details. The paymentRoutes
-// router below only covers the authenticated, JSON-bodied payment endpoints.
+
 
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
